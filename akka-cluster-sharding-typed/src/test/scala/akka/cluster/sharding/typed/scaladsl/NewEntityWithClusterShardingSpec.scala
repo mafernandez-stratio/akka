@@ -320,23 +320,23 @@ class NewEntityWithClusterShardingSpec
      */
     }
 
-//    "EntityRef - AskTimeoutException" in {
-//      val ignorantKey = EntityTypeKey[TestProtocol]("ignorant")
-//
-//      system.initEntity(Entity(ignorantKey)(_ => Behaviors.ignore[TestProtocol]).withStopMessage(StopPlz()))
-//
-//      val ref = system.entityRefFor(ignorantKey, "sloppy")
-//
-//      val reply = ref.ask(WhoAreYou(_))(Timeout(10.millis))
-//      val exc = reply.failed.futureValue
-//      exc.getClass should ===(classOf[AskTimeoutException])
-//      exc.getMessage should startWith("Ask timed out on")
-//      exc.getMessage should include(ignorantKey.toString)
-//      exc.getMessage should include("sloppy") // the entity id
-//      exc.getMessage should include(ref.toString)
-//      exc.getMessage should include(s"[${classOf[WhoAreYou].getName}]") // message class
-//      exc.getMessage should include("[10 ms]") // timeout
-//    }
+    "EntityRef - AskTimeoutException" in {
+      val ignorantKey = EntityTypeKey[TestProtocol]("ignorant")
+
+      system.initEntity(Entity(ignorantKey)(_ => Behaviors.ignore[TestProtocol]).withStopMessage(StopPlz()))
+
+      val ref = system.entityRefFor(ignorantKey, "sloppy")
+
+      val reply = ref.ask(WhoAreYou(_))(Timeout(10.millis))
+      val exc = reply.failed.futureValue
+      exc.getClass should ===(classOf[AskTimeoutException])
+      exc.getMessage should startWith("Ask timed out on")
+      exc.getMessage should include(ignorantKey.toString)
+      exc.getMessage should include("sloppy") // the entity id
+      exc.getMessage should include(ref.toString)
+      exc.getMessage should include(s"[${classOf[WhoAreYou].getName}]") // message class
+      exc.getMessage should include("[10 ms]") // timeout
+    }
 
     "handle classic StartEntity message" in {
       // it is normally using envelopes, but the classic StartEntity message can be sent internally,
@@ -355,11 +355,10 @@ class NewEntityWithClusterShardingSpec
       }
     }
 
-    "handle typed StartEntity message" ignore {
+    "handle typed StartEntity message" in {
       val totalCountBefore = totalEntityCount1()
 
-      // FIXME: this one is special, we need to have a local StartEntity message and transform to the sharded one
-      // shardingRefSystem1WithEnvelope ! StartEntity("startEntity-2")
+      shardingRefSystem1WithEnvelope ! EntityEnvelope.StartEntity("startEntity-2")
 
       eventually {
         val totalCountAfter = totalEntityCount1()

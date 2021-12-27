@@ -8,6 +8,26 @@ import akka.actor.InvalidMessageException
 import akka.actor.WrappedMessage
 import akka.util.unused
 
+object EntityEnvelope {
+
+  final case class StartEntity(entityId: String)
+
+  /** Allows starting a specific Entity by its entity identifier */
+  object StartEntity {
+
+    /**
+     * Returns [[EntityEnvelope]] which can be sent in order to wake up the
+     * specified (by `entityId`) Entity, ''without'' delivering a real message to it.
+     */
+    def apply[M](entityId: String): EntityEnvelope[M] = {
+      // StartEntity isn't really of type M, but erased and StartEntity is only handled internally, not delivered to the entity
+      new EntityEnvelope[M](entityId, new StartEntity(entityId).asInstanceOf[M])
+    }
+  }
+}
+final case class EntityEnvelope[M](entityId: String, message: M) extends WrappedMessage {
+  if (message == null) throw InvalidMessageException("[null] is not an allowed message")
+}
 object EntityMessageExtractor {
 
   /**
@@ -66,8 +86,4 @@ abstract class NoEnvelopeMessageExtractor[M](val numberOfShards: Int) extends En
   override final def unwrapMessage(message: M): M = message
 
   override def toString = s"NoEnvelopeMessageExtractor($numberOfShards)"
-}
-
-final case class EntityEnvelope[M](entityId: String, message: M) extends WrappedMessage {
-  if (message == null) throw InvalidMessageException("[null] is not an allowed message")
 }
