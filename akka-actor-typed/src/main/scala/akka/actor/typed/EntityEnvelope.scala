@@ -41,9 +41,8 @@ object EntityMessageExtractor {
   /**
    * Scala API: Create a message extractor for a protocol where the entity id is available in each message.
    */
-  def noEnvelope[M](numberOfShards: Int, @unused stopMessage: M)(
-      extractEntityId: M => String): EntityMessageExtractor[M, M] =
-    new NoEnvelopeMessageExtractor[M](numberOfShards) {
+  def noEnvelope[M](@unused stopMessage: M)(extractEntityId: M => String): EntityMessageExtractor[M, M] =
+    new NoEnvelopeMessageExtractor[M]() {
       def entityId(message: M): String = extractEntityId(message)
     }
 }
@@ -81,9 +80,9 @@ final class EnvelopeMessageExtractor[M](val numberOfShards: Int) extends EntityM
  *
  * @tparam M The type of message accepted by the entity actor
  */
-abstract class NoEnvelopeMessageExtractor[M](val numberOfShards: Int) extends EntityMessageExtractor[M, M] {
+abstract class NoEnvelopeMessageExtractor[M]() extends EntityMessageExtractor[M, M] {
 
   override final def unwrapMessage(message: M): M = message
 
-  override def toString = s"NoEnvelopeMessageExtractor($numberOfShards)"
+  override def toString = s"NoEnvelopeMessageExtractor()"
 }

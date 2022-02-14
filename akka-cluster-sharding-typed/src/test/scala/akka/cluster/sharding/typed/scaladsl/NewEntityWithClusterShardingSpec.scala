@@ -106,7 +106,7 @@ object NewEntityWithClusterShardingSpec {
       Behaviors.same
   }
 
-  val idTestProtocolMessageExtractor = EntityMessageExtractor.noEnvelope[IdTestProtocol](10, IdStopPlz()) {
+  val idTestProtocolMessageExtractor = EntityMessageExtractor.noEnvelope[IdTestProtocol](IdStopPlz()) {
     case IdReplyPlz(id, _)  => id
     case IdWhoAreYou(id, _) => id
     case other              => throw new IllegalArgumentException(s"Unexpected message $other")
@@ -138,7 +138,7 @@ class NewEntityWithClusterShardingSpec
 
   private val shardingRefSystem1WithoutEnvelope: ActorRef[IdTestProtocol] = system.initEntity(
     Entity(typeKeyWithoutEnvelopes)(_ => behaviorWithId())
-      .withMessageExtractor(EntityMessageExtractor.noEnvelope[IdTestProtocol](10, IdStopPlz()) {
+      .withMessageExtractor(EntityMessageExtractor.noEnvelope[IdTestProtocol](IdStopPlz()) {
         case IdReplyPlz(id, _)  => id
         case IdWhoAreYou(id, _) => id
         case other              => throw new IllegalArgumentException(s"Unexpected message $other")
