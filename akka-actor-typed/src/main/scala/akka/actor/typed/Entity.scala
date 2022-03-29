@@ -6,6 +6,7 @@ package akka.actor.typed
 
 import scala.reflect.ClassTag
 
+import akka.actor.WrappedMessage
 import akka.actor.typed.Entity.EntityCommand
 import akka.actor.typed.Entity.EntitySettings
 import akka.annotation.DoNotInherit
@@ -16,12 +17,12 @@ object Entity {
   @DoNotInherit trait EntityCommand
 
   final case class Passivate[M](entity: ActorRef[M]) extends EntityCommand
+  final case class EntityMessage[M](message: M) extends EntityCommand with WrappedMessage
 
   trait EntitySettings
   def apply[M](typeKey: EntityTypeKey[M])(
       createBehavior: EntityContext[M] => Behavior[M]): Entity[M, EntityEnvelope[M]] =
     new Entity(createBehavior, typeKey, None, Props.empty, None, None)
-
 }
 
 final class Entity[M, E] private[akka] (
@@ -111,4 +112,4 @@ object EntityTypeKey {
 final class EntityContext[M](
     val entityTypeKey: EntityTypeKey[M],
     val entityId: String,
-    val shard: ActorRef[EntityCommand]) {}
+    val manager: ActorRef[EntityCommand])

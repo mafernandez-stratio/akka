@@ -131,10 +131,10 @@ class NewEntityWithClusterShardingSpec
   }
 
   private val shardingRefSystem1WithEnvelope: ActorRef[EntityEnvelope[TestProtocol]] =
-    system.initEntity(Entity(typeKeyWithEnvelopes)(ctx => behavior(ctx.shard)).withStopMessage(StopPlz()))
+    system.initEntity(Entity(typeKeyWithEnvelopes)(ctx => behavior(ctx.manager)).withStopMessage(StopPlz()))
 
   private val shardingRefSystem2WithEnvelope: ActorRef[EntityEnvelope[TestProtocol]] =
-    system2.initEntity(Entity(typeKeyWithEnvelopes)(ctx => behavior(ctx.shard)).withStopMessage(StopPlz()))
+    system2.initEntity(Entity(typeKeyWithEnvelopes)(ctx => behavior(ctx.manager)).withStopMessage(StopPlz()))
 
   private val shardingRefSystem1WithoutEnvelope: ActorRef[IdTestProtocol] = system.initEntity(
     Entity(typeKeyWithoutEnvelopes)(_ => behaviorWithId())
@@ -209,7 +209,8 @@ class NewEntityWithClusterShardingSpec
       val typeKey3 = EntityTypeKey[TestProtocol]("passivate-test")
 
       val shardingRef3: ActorRef[EntityEnvelope[TestProtocol]] =
-        system.initEntity(Entity(typeKey3)(ctx => behavior(ctx.shard, Some(stopProbe.ref))).withStopMessage(StopPlz()))
+        system.initEntity(
+          Entity(typeKey3)(ctx => behavior(ctx.manager, Some(stopProbe.ref))).withStopMessage(StopPlz()))
 
       shardingRef3 ! EntityEnvelope(s"test1", ReplyPlz(p.ref))
       p.expectMessage("Hello!")
@@ -228,7 +229,7 @@ class NewEntityWithClusterShardingSpec
       val typeKey4 = EntityTypeKey[TestProtocol]("passivate-test-poison")
 
       val shardingRef4: ActorRef[EntityEnvelope[TestProtocol]] =
-        system.initEntity(Entity(typeKey4)(ctx => behavior(ctx.shard, Some(stopProbe.ref))))
+        system.initEntity(Entity(typeKey4)(ctx => behavior(ctx.manager, Some(stopProbe.ref))))
       // no StopPlz stopMessage
 
       shardingRef4 ! EntityEnvelope(s"test4", ReplyPlz(p.ref))
@@ -243,7 +244,7 @@ class NewEntityWithClusterShardingSpec
     }
 
     "fail if init sharding for already used typeName, but with a different type" in {
-      // sharding has been already initialized with EntityTypeKey[TestProtocol]("envelope-shard")
+      // sharding has been already initialized with EntityTypeKey[TestProtocol]("envelope")
       val ex = intercept[Exception] {
         system.initEntity(
           Entity(EntityTypeKey[IdTestProtocol]("envelope"))(_ => behaviorWithId()).withStopMessage(IdStopPlz()))

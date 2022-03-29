@@ -49,7 +49,9 @@ private[akka] class EntityExtensionImpl(system: ActorSystem[_]) extends EntityEx
               e)
         }
         .get
-    } else LocalEntityProvider
+    } else {
+      new LocalEntityProvider(system)
+    }
 
   override def initEntity[M, E](entity: Entity[M, E]): ActorRef[E] =
     provider.initEntity(entity)

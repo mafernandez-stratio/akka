@@ -28,6 +28,7 @@ object EntityEnvelope {
 final case class EntityEnvelope[M](entityId: String, message: M) extends WrappedMessage {
   if (message == null) throw InvalidMessageException("[null] is not an allowed message")
 }
+
 object EntityMessageExtractor {
 
   /**

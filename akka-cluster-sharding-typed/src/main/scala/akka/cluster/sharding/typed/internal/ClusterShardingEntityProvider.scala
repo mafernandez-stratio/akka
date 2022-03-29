@@ -98,8 +98,8 @@ private[akka] object EntityAdapter {
   def toEntityContext[M](ctx: ShardedEntityContext[M]): EntityContext[M] = {
     val typeKey = toEntityTypeKey(ctx.entityTypeKey)
     // FIXME: needs proper conversion
-    val shardRef: ActorRef[EntityCommand] = ctx.shard.asInstanceOf[ActorRef[EntityCommand]]
-    new EntityContext(typeKey, ctx.entityId, shardRef)
+    val managerRef: ActorRef[EntityCommand] = ctx.shard.asInstanceOf[ActorRef[EntityCommand]]
+    new EntityContext(typeKey, ctx.entityId, managerRef)
   }
 
   def toEntityRef[M](shardedEntity: ShardedEntityRef[M]): EntityRef[M] = new ShardedEntityRefWrapper(shardedEntity)
