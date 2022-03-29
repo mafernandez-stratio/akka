@@ -63,41 +63,65 @@ private[akka] class LocalEntityProvider(system: ActorSystem[_]) extends EntityPr
           override def apply(t: String): ActorRef[_] =
             system.systemActorOf(
               EntityManager.behavior(entity),
-              URLEncoder.encode(entity.typeKey.name, ByteString.UTF_8) + "-EntityManager")
+              "entity-manager-" + URLEncoder.encode(entity.typeKey.name, ByteString.UTF_8))
         })
     entityManager.asInstanceOf[ActorRef[E]]
   }
 
-  override def entityRefFor[M](key: EntityTypeKey[M], id: String): EntityRef[M] = {
+  override def entityRefFor[M](typeKey: EntityTypeKey[M], entityId: String): EntityRef[M] = {
+    val managerRef = entityManagers.get(typeKey.name).asInstanceOf[ActorRef[Any]]
+    EntityRefImpl[M](entityId, typeKey, managerRef)
+  }
 
-    val managerRef = entityManagers.get(key.name).asInstanceOf[ActorRef[Any]]
+  /**
+   * INTERNAL API
+   */
+  @InternalApi
+  private[akka] case class EntityRefImpl[M](
+      entityId: String,
+      typeKey: EntityTypeKey[M],
+      entityManagerRef: ActorRef[Any])
+      extends EntityRef[M]
+      with InternalRecipientRef[M] {
 
-    new EntityRef[M] with InternalRecipientRef[M] {
+    /**
+     * Converts incoming message to what the EntityManager expects.
+     * It may be returned as is or wrapped in an EntityEnvelope.
+     */
+    private def toEntityMessage(msg: M): Any =
+      if (hasExtractor.get(typeKey.name)) msg
+      else EntityEnvelope(entityId, msg)
 
-      override val entityId: String = id
-      override val typeKey: EntityTypeKey[M] = key
+    override def tell(msg: M): Unit =
+      entityManagerRef ! toEntityMessage(msg)
 
-      override def tell(msg: M): Unit =
-        if (hasExtractor.get(key.name)) {
-          managerRef ! msg
-        } else {
-          managerRef ! EntityEnvelope(entityId, msg)
-        }
+    override def ask[Res](func: ActorRef[Res] => M)(implicit timeout: Timeout): Future[Res] = {
+      implicit val scheduler = system.scheduler
+      entityManagerRef.ask { replyTo: ActorRef[Res] =>
+        toEntityMessage(func(replyTo))
+      }
+    }
 
-      override def ask[Res](f: ActorRef[Res] => M)(implicit timeout: Timeout): Future[Res] = {
-        implicit val scheduler = system.scheduler
-        managerRef.ask { replyTo: ActorRef[Res] =>
-          f(replyTo)
-        }
+    override def askWithStatus[Res](func: ActorRef[StatusReply[Res]] => M)(implicit timeout: Timeout): Future[Res] =
+      StatusReply.flattenStatusFuture(ask[StatusReply[Res]](func))
+
+    override def provider: ActorRefProvider =
+      entityManagerRef.asInstanceOf[InternalRecipientRef[_]].provider
+
+    override def isTerminated: Boolean =
+      entityManagerRef.asInstanceOf[InternalRecipientRef[_]].isTerminated
+
+    override def hashCode(): Int =
+      // 3 and 5 chosen as primes which are +/- 1 from a power-of-two
+      ((entityId.hashCode * 3) + typeKey.hashCode) * 5
+
+    override def equals(other: Any): Boolean =
+      other match {
+        case eri: EntityRefImpl[_] => (eri.entityId == entityId) && (eri.typeKey == typeKey)
+        case _                     => false
       }
 
-      override def askWithStatus[Res](f: ActorRef[StatusReply[Res]] => M)(implicit timeout: Timeout): Future[Res] = ???
+    override def toString: String = s"EntityRef($typeKey, $entityId)"
 
-      override def provider: ActorRefProvider =
-        managerRef.asInstanceOf[InternalRecipientRef[_]].provider
-
-      override def isTerminated: Boolean =
-        managerRef.asInstanceOf[InternalRecipientRef[_]].isTerminated
-    }
   }
 }

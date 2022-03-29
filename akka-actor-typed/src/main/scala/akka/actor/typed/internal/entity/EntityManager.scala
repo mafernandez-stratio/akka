@@ -25,10 +25,6 @@ import akka.util.ByteString
 @InternalApi
 private[akka] object EntityManager {
 
-  // TODO: entity must be child of this actor
-  // once EntityKey is init, this actor is create and never dies. EntityManager forward to it
-  // this Actor receives the passivation requests and manage the buffering for the entities is
-
   def behavior[M, E](entity: Entity[M, E]): Behavior[Any] = {
 
     // key will be the entityName and buffer vector contains an envelope so we keep track of entityID
@@ -74,6 +70,7 @@ private[akka] object EntityManager {
         .receiveMessage[Any] {
 
           case Passivate(actor: ActorRef[M] @unchecked) if ctx.child(actor.path.name).isDefined =>
+            log.debug("Received passivation request for {}", actor)
             // start to buffer message for this entity
             entityMessageBuffers = entityMessageBuffers + (actor.path.name -> Vector.empty)
 
@@ -108,7 +105,7 @@ private[akka] object EntityManager {
                 log.debug("Re-instantiating entity for id {}", buffer.head.entityId)
                 val entityRef = lookupEntityRef(buffer.head.entityId)
 
-                log.debug("Delivering buffered messages to entity {}", entityRef.path)
+                log.debug("Delivering {} buffered messages to entity {}", buffer.length, entityRef.path)
                 entityRef ! buffer.head.message
 
                 buffer.tail.foreach { env =>
