@@ -13,7 +13,7 @@ import scala.util.Success
 import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.testkit.typed.scaladsl.TestProbe
-import akka.actor.typed.internal.entity.EntityManager
+import akka.actor.typed.EntityEnvelope.StartEntity
 import akka.actor.typed.scaladsl.Behaviors
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -50,7 +50,7 @@ object EntitySpec {
           stopProbe.foreach(_ ! "StopPlz")
           Behaviors.stopped
 
-        case (ctx, WhoAreYou(replyTo)) =>
+        case (_, WhoAreYou(replyTo)) =>
           replyTo ! s"I'm ${context.entityId}"
           Behaviors.same
 
@@ -69,8 +69,7 @@ object EntitySpec {
     case (_, IdStopPlz) =>
       Behaviors.stopped
 
-    case (ctx, IdWhoAreYou(_, replyTo)) =>
-      val address = ctx.system.address
+    case (_, IdWhoAreYou(_, replyTo)) =>
       replyTo ! s"I'm ${context.entityId}"
       Behaviors.same
 
@@ -251,7 +250,6 @@ class EntitySpec extends ScalaTestWithActorTestKit(EntitySpec.config) with AnyWo
 
     "EntityRef - AskTimeoutException" in {
       val ignorantKey = EntityTypeKey[TestProtocol]("ignorant")
-
       system.initEntity(Entity(ignorantKey)(_ => Behaviors.ignore[TestProtocol]).withStopMessage(StopPlz))
 
       val ref = system.entityRefFor(ignorantKey, "sloppy")

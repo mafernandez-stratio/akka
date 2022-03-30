@@ -97,6 +97,8 @@ private[akka] object EntityManager {
             deliverToEntity(id, msg)
             Behaviors.same
 
+          case _ => Behaviors.unhandled
+
         }
         .receiveSignal {
           case (_, Terminated(actor)) =>
