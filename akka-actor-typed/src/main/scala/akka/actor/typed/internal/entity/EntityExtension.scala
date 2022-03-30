@@ -4,6 +4,8 @@
 
 package akka.actor.typed.internal.entity
 
+import scala.collection.immutable
+
 import akka.actor.typed.ActorRef
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.Entity
@@ -40,7 +42,7 @@ private[akka] class EntityExtensionImpl(system: ActorSystem[_]) extends EntityEx
       system.dynamicAccess
         .createInstanceFor[EntityProvider](
           "akka.cluster.sharding.typed.internal.ClusterShardingEntityProvider",
-          Seq((classOf[ActorSystem[_]], system)))
+          immutable.Seq((classOf[ActorSystem[_]], system)))
         .recover {
           case e =>
             throw new RuntimeException(

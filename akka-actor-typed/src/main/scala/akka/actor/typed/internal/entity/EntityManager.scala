@@ -36,7 +36,7 @@ private[akka] object EntityManager {
       "entity-" + URLEncoder.encode(entityId, ByteString.UTF_8)
 
     Behaviors.setup[Any] { ctx =>
-      val log = Logging(ctx.system.toClassic, classOf[EntityManager.type])
+      val log = Logging(ctx.system.toClassic, getClass)
 
       def lookupEntityRef(id: String) = {
 
