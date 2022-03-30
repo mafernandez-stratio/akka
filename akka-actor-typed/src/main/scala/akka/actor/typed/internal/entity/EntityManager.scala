@@ -25,6 +25,8 @@ import akka.util.ByteString
 @InternalApi
 private[akka] object EntityManager {
 
+  case object GetActiveEntities
+
   def behavior[M, E](entity: Entity[M, E]): Behavior[Any] = {
 
     // key will be the entityName and buffer vector contains an envelope so we keep track of entityID
@@ -66,6 +68,7 @@ private[akka] object EntityManager {
             lookupEntityRef(entityId) ! message
         }
       }
+
       Behaviors
         .receiveMessage[Any] {
 

@@ -267,16 +267,18 @@ class EntitySpec extends ScalaTestWithActorTestKit(EntitySpec.config) with AnyWo
 
     "handle typed StartEntity message" in {
 
-      pending
+      val probe = TestProbe[String]()
+      val key = EntityTypeKey[TestProtocol]("start-entity")
+      val entity = Entity(key) { ctx =>
+        Behaviors.setup { _ =>
+          probe ! s"${ctx.entityId} just started her day"
+          behavior(ctx)
+        }
+      }
+      val managerRef = system.initEntity(entity)
 
-//      val totalCountBefore = totalEntityCount1()
-//
-//      shardingRefSystem1WithEnvelope ! EntityEnvelope.StartEntity("startEntity-2")
-//
-//      eventually {
-//        val totalCountAfter = totalEntityCount1()
-//        totalCountAfter should ===(totalCountBefore + 1)
-//      }
+      managerRef ! StartEntity("Alice")
+      probe.expectMessage("Alice just started her day")
     }
 
   }
