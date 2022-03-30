@@ -14,10 +14,10 @@ import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.testkit.typed.scaladsl.TestProbe
 import akka.actor.typed.ActorRef
 import akka.actor.typed.ActorSystem
-import akka.actor.typed.Entity
+import akka.actor.typed.{ Entity => LocalEntity }
 import akka.actor.typed.EntityEnvelope
 import akka.actor.typed.EntityMessageExtractor
-import akka.actor.typed.EntityTypeKey
+import akka.actor.typed.{ EntityTypeKey => LocalEntityTypeKey }
 import akka.actor.typed.PostStop
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
@@ -33,7 +33,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpecLike
 
 @ccompatUsedUntil213
-object NewEntityWithClusterShardingSpec {
+object LocalEntityWithClusterShardingSpec {
   val config = ConfigFactory.parseString(s"""
       akka.actor.provider = cluster
 
@@ -63,8 +63,8 @@ object NewEntityWithClusterShardingSpec {
 
   final case class TheReply(s: String)
 
-  val typeKeyWithEnvelopes = EntityTypeKey[TestProtocol]("envelope")
-  val typeKeyWithoutEnvelopes = EntityTypeKey[IdTestProtocol]("no-envelope")
+  val typeKeyWithEnvelopes = LocalEntityTypeKey[TestProtocol]("envelope")
+  val typeKeyWithoutEnvelopes = LocalEntityTypeKey[IdTestProtocol]("no-envelope")
 
   def behavior(shard: ActorRef[ClusterSharding.ShardCommand], stopProbe: Option[ActorRef[String]] = None) =
     Behaviors
@@ -113,12 +113,12 @@ object NewEntityWithClusterShardingSpec {
   }
 }
 
-class NewEntityWithClusterShardingSpec
+class LocalEntityWithClusterShardingSpec
     extends ScalaTestWithActorTestKit(ClusterShardingSpec.config)
     with AnyWordSpecLike
     with LogCapturing {
 
-  import NewEntityWithClusterShardingSpec._
+  import LocalEntityWithClusterShardingSpec._
 
   val sharding = ClusterSharding(system)
 
@@ -131,13 +131,13 @@ class NewEntityWithClusterShardingSpec
   }
 
   private val shardingRefSystem1WithEnvelope: ActorRef[EntityEnvelope[TestProtocol]] =
-    system.initEntity(Entity(typeKeyWithEnvelopes)(ctx => behavior(ctx.manager)).withStopMessage(StopPlz()))
+    system.initEntity(LocalEntity(typeKeyWithEnvelopes)(ctx => behavior(ctx.manager)).withStopMessage(StopPlz()))
 
   private val shardingRefSystem2WithEnvelope: ActorRef[EntityEnvelope[TestProtocol]] =
-    system2.initEntity(Entity(typeKeyWithEnvelopes)(ctx => behavior(ctx.manager)).withStopMessage(StopPlz()))
+    system2.initEntity(LocalEntity(typeKeyWithEnvelopes)(ctx => behavior(ctx.manager)).withStopMessage(StopPlz()))
 
   private val shardingRefSystem1WithoutEnvelope: ActorRef[IdTestProtocol] = system.initEntity(
-    Entity(typeKeyWithoutEnvelopes)(_ => behaviorWithId())
+    LocalEntity(typeKeyWithoutEnvelopes)(_ => behaviorWithId())
       .withMessageExtractor(EntityMessageExtractor.noEnvelope[IdTestProtocol](IdStopPlz()) {
         case IdReplyPlz(id, _)  => id
         case IdWhoAreYou(id, _) => id
@@ -146,7 +146,7 @@ class NewEntityWithClusterShardingSpec
       .withStopMessage(IdStopPlz()))
 
   private val shardingRefSystem2WithoutEnvelope: ActorRef[IdTestProtocol] = system2.initEntity(
-    Entity(typeKeyWithoutEnvelopes)(_ => behaviorWithId())
+    LocalEntity(typeKeyWithoutEnvelopes)(_ => behaviorWithId())
       .withMessageExtractor(idTestProtocolMessageExtractor)
       .withStopMessage(IdStopPlz()))
 
@@ -206,11 +206,11 @@ class NewEntityWithClusterShardingSpec
     "be able to passivate with custom stop message" in {
       val stopProbe = TestProbe[String]()
       val p = TestProbe[String]()
-      val typeKey3 = EntityTypeKey[TestProtocol]("passivate-test")
+      val typeKey3 = LocalEntityTypeKey[TestProtocol]("passivate-test")
 
       val shardingRef3: ActorRef[EntityEnvelope[TestProtocol]] =
         system.initEntity(
-          Entity(typeKey3)(ctx => behavior(ctx.manager, Some(stopProbe.ref))).withStopMessage(StopPlz()))
+          LocalEntity(typeKey3)(ctx => behavior(ctx.manager, Some(stopProbe.ref))).withStopMessage(StopPlz()))
 
       shardingRef3 ! EntityEnvelope(s"test1", ReplyPlz(p.ref))
       p.expectMessage("Hello!")
@@ -226,10 +226,10 @@ class NewEntityWithClusterShardingSpec
     "be able to passivate with PoisonPill" in {
       val stopProbe = TestProbe[String]()
       val p = TestProbe[String]()
-      val typeKey4 = EntityTypeKey[TestProtocol]("passivate-test-poison")
+      val typeKey4 = LocalEntityTypeKey[TestProtocol]("passivate-test-poison")
 
       val shardingRef4: ActorRef[EntityEnvelope[TestProtocol]] =
-        system.initEntity(Entity(typeKey4)(ctx => behavior(ctx.manager, Some(stopProbe.ref))))
+        system.initEntity(LocalEntity(typeKey4)(ctx => behavior(ctx.manager, Some(stopProbe.ref))))
       // no StopPlz stopMessage
 
       shardingRef4 ! EntityEnvelope(s"test4", ReplyPlz(p.ref))
@@ -244,10 +244,11 @@ class NewEntityWithClusterShardingSpec
     }
 
     "fail if init sharding for already used typeName, but with a different type" in {
-      // sharding has been already initialized with EntityTypeKey[TestProtocol]("envelope")
+      // sharding has been already initialized with LocalEntityTypeKey[TestProtocol]("envelope")
       val ex = intercept[Exception] {
         system.initEntity(
-          Entity(EntityTypeKey[IdTestProtocol]("envelope"))(_ => behaviorWithId()).withStopMessage(IdStopPlz()))
+          LocalEntity(LocalEntityTypeKey[IdTestProtocol]("envelope"))(_ => behaviorWithId())
+            .withStopMessage(IdStopPlz()))
       }
 
       ex.getMessage should include("already initialized")
@@ -322,9 +323,9 @@ class NewEntityWithClusterShardingSpec
     }
 
     "EntityRef - AskTimeoutException" in {
-      val ignorantKey = EntityTypeKey[TestProtocol]("ignorant")
+      val ignorantKey = LocalEntityTypeKey[TestProtocol]("ignorant")
 
-      system.initEntity(Entity(ignorantKey)(_ => Behaviors.ignore[TestProtocol]).withStopMessage(StopPlz()))
+      system.initEntity(LocalEntity(ignorantKey)(_ => Behaviors.ignore[TestProtocol]).withStopMessage(StopPlz()))
 
       val ref = system.entityRefFor(ignorantKey, "sloppy")
 
