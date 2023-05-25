@@ -27,7 +27,8 @@ import akka.annotation.InternalApi
 @InternalApi private[akka] object JacksonModule {
 
   lazy val version: Version = {
-    val groupId = "com.stratio.akka"
+    //val groupId = "com.stratio.akka"
+    val groupId = "com.typesafe.akka"
     val artifactId = "akka-serialization-jackson"
     val version = akka.Version.current
     VersionUtil.parseVersion(version, groupId, artifactId)

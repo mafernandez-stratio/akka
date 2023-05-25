@@ -26,7 +26,8 @@ object AkkaBuild {
   val parallelExecutionByDefault = false // TODO: enable this once we're sure it does not break things
 
   lazy val buildSettings = Def.settings(
-    organization := "com.stratio.akka",
+    //organization := "com.stratio.akka",
+    organization := "com.typesafe.akka",
     Dependencies.Versions)
 
   lazy val rootSettings = Def.settings(
@@ -59,7 +60,7 @@ object AkkaBuild {
           (outputPath / "[artifact]-[revision](-[classifier]).[ext]").absolutePath
 
         val resolver = Resolver.file("user-publish-m2-local", new File(path))
-        (resolver, Seq(
+        val result = (resolver, Seq(
           otherResolvers := resolver :: publishTo.value.toList,
           publishM2Configuration := Classpaths.publishConfig(
             publishMavenStyle.value,
@@ -70,7 +71,11 @@ object AkkaBuild {
             resolverName = resolver.name,
             checksums = checksums.in(publishM2).value.toVector,
             logging = ivyLoggingLevel.value,
-            overwrite = true)))
+            overwrite = true).withOverwrite(true)))
+        publishM2Configuration := publishM2Configuration.value.withOverwrite(true)
+        publishConfiguration := publishConfiguration.value.withOverwrite(true)
+        publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)
+        result
     }
 
   lazy val resolverSettings = Def.settings(
