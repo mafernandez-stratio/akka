@@ -26,8 +26,7 @@ object AkkaBuild {
   val parallelExecutionByDefault = false // TODO: enable this once we're sure it does not break things
 
   lazy val buildSettings = Def.settings(
-    //organization := "com.stratio.akka",
-    organization := "com.typesafe.akka",
+    organization := "com.stratio.akka",
     Dependencies.Versions)
 
   lazy val rootSettings = Def.settings(
